@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Program Files/nodejs/node.exe\" --version)",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" --version)",
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" --yes create-next-app@14 echoes-temp --typescript --tailwind --app --eslint --no-src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(mv echoes-temp/.eslintrc.json echoes-temp/.gitignore echoes-temp/README.md echoes-temp/next-env.d.ts echoes-temp/next.config.mjs echoes-temp/package.json echoes-temp/package-lock.json echoes-temp/postcss.config.mjs echoes-temp/tailwind.config.ts echoes-temp/tsconfig.json .)",
+      "Bash(mv echoes-temp/app .)",
+      "Bash(mv echoes-temp/node_modules .)",
+      "Bash(rmdir echoes-temp *)",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" install framer-motion @supabase/supabase-js groq)",
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit)",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" uninstall groq)",
+      "Bash(\"/c/Program Files/nodejs/npm.cmd\" install groq-sdk)",
+      "Bash(npm.cmd install *)"
+    ]
+  }
+}
