@@ -12,6 +12,8 @@ interface WallProps {
   ownThoughtIds: string[];
   newIds: Set<string>;
   activeFilter: string;
+  expandedId: string | null;
+  onExpandChange: (id: string | null) => void;
   onFelt: (id: string) => void;
 }
 
@@ -35,7 +37,15 @@ const wallVariants: Variants = {
   },
 };
 
-export default function Wall({ thoughts, ownThoughtIds, newIds, activeFilter, onFelt }: WallProps) {
+export default function Wall({
+  thoughts,
+  ownThoughtIds,
+  newIds,
+  activeFilter,
+  expandedId,
+  onExpandChange,
+  onFelt,
+}: WallProps) {
   const ownSet = useMemo(() => new Set(ownThoughtIds), [ownThoughtIds]);
   const isAll = activeFilter === "all";
 
@@ -64,6 +74,8 @@ export default function Wall({ thoughts, ownThoughtIds, newIds, activeFilter, on
             isOwn={ownSet.has(thought.id)}
             isNew={newIds.has(thought.id)}
             isMatched={isAll || thought.mood === activeFilter}
+            expandedId={expandedId}
+            onExpandChange={onExpandChange}
             onFelt={onFelt}
           />
         ))}

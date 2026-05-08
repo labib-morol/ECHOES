@@ -36,6 +36,7 @@ const ALL = "all";
 const REFETCH_INTERVAL_MS = 60_000;
 const MONO_STACK =
   'ui-monospace, "SF Mono", "JetBrains Mono", "Courier New", monospace';
+const FAB_LABEL_KEY = "echoes:fab-label:v1";
 
 const SKELETON_POSITIONS: { x: number; y: number; rot: number; w: number; h: number }[] = [
   { x: 6, y: 4, rot: -3, w: 220, h: 108 },
@@ -47,6 +48,8 @@ const SKELETON_POSITIONS: { x: number; y: number; rot: number; w: number; h: num
   { x: 18, y: 68, rot: -1, w: 240, h: 110 },
   { x: 56, y: 70, rot: 2.5, w: 220, h: 96 },
 ];
+
+const MOBILE_SKELETON_COUNT = 3;
 
 function loadThoughts(signal?: AbortSignal): Promise<Thought[]> {
   return fetch("/api/thoughts", { signal })
@@ -71,7 +74,42 @@ export default function Home() {
   const [thoughtCount, setThoughtCount] = useState<number | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [nightLabel, setNightLabel] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileKeyOpen, setMobileKeyOpen] = useState(false);
+  const [showFabLabel, setShowFabLabel] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const composeOpenRef = useRef(composeOpen);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setShowFabLabel(false);
+      return;
+    }
+    let timer: number | null = null;
+    try {
+      if (window.localStorage.getItem(FAB_LABEL_KEY) !== "1") {
+        setShowFabLabel(true);
+        timer = window.setTimeout(() => {
+          setShowFabLabel(false);
+          try {
+            window.localStorage.setItem(FAB_LABEL_KEY, "1");
+          } catch {}
+        }, 3200);
+      }
+    } catch {}
+    return () => {
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     composeOpenRef.current = composeOpen;
@@ -223,6 +261,34 @@ export default function Home() {
 
   const moods = useMemo(() => visibleThoughts.map((t) => t.mood), [visibleThoughts]);
 
+  const matchedCount = useMemo(() => {
+    if (activeFilter === ALL) return visibleThoughts.length;
+    return visibleThoughts.filter((t) => t.mood === activeFilter).length;
+  }, [visibleThoughts, activeFilter]);
+
+  const showFilterEmpty =
+    activeFilter !== ALL && matchedCount === 0 && visibleThoughts.length > 0;
+
+  const handleRandomThought = useCallback(() => {
+    if (visibleThoughts.length === 0) return;
+    const filtered =
+      activeFilter === ALL
+        ? visibleThoughts
+        : visibleThoughts.filter((t) => t.mood === activeFilter);
+    const pool = filtered.length > 0 ? filtered : visibleThoughts;
+    const random = pool[Math.floor(Math.random() * pool.length)];
+    setExpandedId(random.id);
+  }, [visibleThoughts, activeFilter]);
+
+  useEffect(() => {
+    if (!expandedId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExpandedId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expandedId]);
+
   const showToast = useCallback((message: string, type: ToastType) => {
     if (toastTimerRef.current !== null) {
       window.clearTimeout(toastTimerRef.current);
@@ -310,6 +376,10 @@ export default function Home() {
     },
     [showToast]
   );
+
+  const handleSoundToggle = useCallback(() => {
+    showToast("ambient sound — coming soon", "info");
+  }, [showToast]);
 
   useEffect(() => {
     document.title = composeOpen ? TITLE_COMPOSE : TITLE_DEFAULT;
@@ -400,26 +470,27 @@ export default function Home() {
         {toast && (
           <motion.div
             key={toast.id}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: isMobile ? -8 : 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
+            exit={{ opacity: 0, y: isMobile ? -8 : 8 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
             style={{
               position: "fixed",
-              bottom: 48,
+              ...(isMobile ? { top: 84 } : { bottom: 96 }),
               left: "50%",
               transform: "translateX(-50%)",
-              zIndex: 40,
+              zIndex: 50,
               fontFamily: "var(--font-syne), sans-serif",
               fontWeight: 300,
               fontSize: 11,
               color: TOAST_COLOR[toast.type],
-              background: "rgba(13,11,9,0.85)",
+              background: "rgba(13,11,9,0.88)",
               backdropFilter: "blur(8px)",
               WebkitBackdropFilter: "blur(8px)",
               border: "0.5px solid rgba(255,255,255,0.06)",
+              borderLeft: `2px solid ${TOAST_COLOR[toast.type]}`,
               borderRadius: 4,
-              padding: "8px 16px",
+              padding: "8px 16px 8px 14px",
               letterSpacing: "0.04em",
               pointerEvents: "none",
               whiteSpace: "nowrap",
@@ -507,7 +578,41 @@ export default function Home() {
             className="top-bar-actions"
             style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}
           >
-            <form onSubmit={handleUnlock} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {isMobile && !mobileKeyOpen && (
+              <button
+                type="button"
+                onClick={() => setMobileKeyOpen(true)}
+                aria-label="enter your key"
+                title="enter your key"
+                style={{
+                  fontFamily: "var(--font-syne), sans-serif",
+                  fontWeight: 300,
+                  fontSize: 16,
+                  color: "#666",
+                  background: "transparent",
+                  border: "0.5px solid #2a2a2a",
+                  borderRadius: 4,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  lineHeight: 1,
+                }}
+              >
+                🗝
+              </button>
+            )}
+            {(!isMobile || mobileKeyOpen) && (
+            <form
+              onSubmit={handleUnlock}
+              className="unlock-form"
+              style={{
+                display: "flex",
+                gap: 6,
+                alignItems: "center",
+                flexWrap: "nowrap",
+                flexShrink: 1,
+                minWidth: 0,
+              }}
+            >
               <input
                 type="text"
                 value={keyInput}
@@ -519,6 +624,7 @@ export default function Home() {
                   }
                 }}
                 placeholder="ECHO-XXXX-XXXX"
+                className="key-input"
                 style={{
                   fontFamily: MONO_STACK,
                   fontSize: 11,
@@ -530,11 +636,13 @@ export default function Home() {
                   outline: "none",
                   letterSpacing: "0.12em",
                   width: 170,
+                  minWidth: 0,
                   textTransform: "uppercase",
                 }}
               />
               <button
                 type="submit"
+                className="unlock-btn"
                 style={{
                   fontFamily: MONO_STACK,
                   fontSize: 10,
@@ -546,6 +654,8 @@ export default function Home() {
                   borderRadius: 4,
                   padding: "8px 12px",
                   cursor: "pointer",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
                 }}
               >
                 [ unlock ]
@@ -554,8 +664,8 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={clearKey}
-                  aria-label="show all thoughts"
-                  title="show all"
+                  aria-label="forget this key"
+                  title="forget this key"
                   style={{
                     fontFamily: MONO_STACK,
                     fontSize: 10,
@@ -571,10 +681,36 @@ export default function Home() {
                   ✕
                 </button>
               )}
+              {isMobile && mobileKeyOpen && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileKeyOpen(false);
+                    if (!isUnlocked) setKeyInput("");
+                  }}
+                  aria-label="collapse key input"
+                  title="collapse"
+                  style={{
+                    fontFamily: MONO_STACK,
+                    fontSize: 10,
+                    color: "#555",
+                    background: "transparent",
+                    border: "0.5px solid #2a2a2a",
+                    borderRadius: 4,
+                    padding: "8px 10px",
+                    cursor: "pointer",
+                    lineHeight: 1,
+                  }}
+                >
+                  −
+                </button>
+              )}
             </form>
+            )}
             <button
               type="button"
               onClick={() => setComposeOpen(true)}
+              className="release-btn"
               style={{
                 fontFamily: MONO_STACK,
                 fontSize: 10,
@@ -586,9 +722,30 @@ export default function Home() {
                 borderRadius: 4,
                 padding: "8px 14px",
                 cursor: "pointer",
+                flexShrink: 0,
+                whiteSpace: "nowrap",
               }}
             >
               [ + release ]
+            </button>
+            <button
+              type="button"
+              onClick={handleSoundToggle}
+              aria-label="ambient sound (coming soon)"
+              title="ambient sound — coming soon"
+              style={{
+                fontFamily: "var(--font-syne), sans-serif",
+                fontWeight: 300,
+                fontSize: 14,
+                color: "#333",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 6,
+                lineHeight: 1,
+              }}
+            >
+              🔇
             </button>
             <button
               type="button"
@@ -612,7 +769,13 @@ export default function Home() {
           </div>
         </header>
 
-        <FilterBar moods={moods} activeFilter={activeFilter} onFilter={setActiveFilter} />
+        <FilterBar
+          moods={moods}
+          activeFilter={activeFilter}
+          onFilter={setActiveFilter}
+          onRandom={handleRandomThought}
+          randomEnabled={visibleThoughts.length > 0}
+        />
       </div>
 
       <main
@@ -623,26 +786,44 @@ export default function Home() {
           zIndex: 1,
         }}
       >
-        <div>
+        <div style={{ position: "relative" }}>
           {loading ? (
-            <div className="wall" aria-hidden="true">
-              {SKELETON_POSITIONS.map((p, i) => (
-                <div
-                  key={i}
-                  className="wall-card skeleton-shimmer"
-                  style={{
-                    left: `${p.x}%`,
-                    top: `${p.y}%`,
-                    width: p.w,
-                    height: p.h,
-                    borderLeft: "2px solid rgba(255,255,255,0.05)",
-                    borderRadius: 4,
-                    boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.04)",
-                    transform: `rotate(${p.rot}deg)`,
-                  }}
-                />
-              ))}
-            </div>
+            isMobile ? (
+              <div className="wall" aria-hidden="true">
+                {Array.from({ length: MOBILE_SKELETON_COUNT }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="wall-card skeleton-shimmer"
+                    style={{
+                      width: "100%",
+                      height: 120,
+                      borderLeft: "2px solid rgba(255,255,255,0.05)",
+                      borderRadius: 12,
+                      boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.04)",
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="wall" aria-hidden="true">
+                {SKELETON_POSITIONS.map((p, i) => (
+                  <div
+                    key={i}
+                    className="wall-card skeleton-shimmer"
+                    style={{
+                      left: `${p.x}%`,
+                      top: `${p.y}%`,
+                      width: p.w,
+                      height: p.h,
+                      borderLeft: "2px solid rgba(255,255,255,0.05)",
+                      borderRadius: 4,
+                      boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.04)",
+                      transform: `rotate(${p.rot}deg)`,
+                    }}
+                  />
+                ))}
+              </div>
+            )
           ) : visibleThoughts.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
@@ -688,8 +869,63 @@ export default function Home() {
               ownThoughtIds={ownThoughtIds}
               newIds={newIds}
               activeFilter={activeFilter}
+              expandedId={expandedId}
+              onExpandChange={setExpandedId}
               onFelt={handleFelt}
             />
+          )}
+          {showFilterEmpty && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 1, ease: "easeOut" }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                pointerEvents: "none",
+                padding: 24,
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  fontSize: 20,
+                  color: "#1e1e1c",
+                  lineHeight: 1,
+                }}
+              >
+                ○
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-playfair), serif",
+                  fontStyle: "italic",
+                  fontSize: 15,
+                  color: "#2a2826",
+                  letterSpacing: "-0.005em",
+                  textAlign: "center",
+                }}
+              >
+                no thoughts here yet
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-syne), sans-serif",
+                  fontWeight: 300,
+                  fontSize: 10,
+                  color: "#1e1e1c",
+                  letterSpacing: "0.08em",
+                  textAlign: "center",
+                }}
+              >
+                be the first to release one into this space.
+              </div>
+            </motion.div>
           )}
         </div>
 
@@ -727,56 +963,91 @@ export default function Home() {
       </main>
 
       <AnimatePresence>
-        {!composeOpen && !aboutOpen && !showOnboarding && (
-          <motion.button
-            key="fab-release"
-            type="button"
-            onClick={() => setComposeOpen(true)}
-            aria-label="release a thought"
-            title="release a thought"
+        {!composeOpen && !aboutOpen && !showOnboarding && expandedId === null && (
+          <motion.div
+            key="fab-wrapper"
             initial={{ opacity: 0, scale: 0.85 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              boxShadow: [
-                "0 0 0 0 rgba(196, 122, 58, 0)",
-                "0 0 22px 4px rgba(196, 122, 58, 0.22)",
-                "0 0 0 0 rgba(196, 122, 58, 0)",
-              ],
-            }}
+            animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
-            transition={{
-              opacity: { duration: 0.4, ease: "easeOut" },
-              scale: { duration: 0.4, ease: "easeOut" },
-              boxShadow: { duration: 3.6, repeat: Infinity, ease: "easeInOut" },
-            }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.96 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
             style={{
               position: "fixed",
-              right: 24,
-              bottom: 24,
+              right: isMobile ? 20 : 24,
+              bottom: isMobile ? 28 : 24,
               zIndex: 35,
-              width: 52,
-              height: 52,
-              borderRadius: "50%",
-              background: "rgba(196, 122, 58, 0.12)",
-              border: "0.5px solid rgba(196, 122, 58, 0.55)",
-              color: "#c47a3a",
-              fontFamily: "var(--font-syne), sans-serif",
-              fontWeight: 300,
-              fontSize: 24,
-              lineHeight: 1,
-              cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
+              gap: 12,
             }}
           >
-            +
-          </motion.button>
+            <AnimatePresence>
+              {showFabLabel && (
+                <motion.span
+                  key="fab-label"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                  style={{
+                    fontFamily: "var(--font-playfair), serif",
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: "#c4bdb0",
+                    letterSpacing: "0.01em",
+                    background: "rgba(13,11,9,0.85)",
+                    backdropFilter: "blur(6px)",
+                    WebkitBackdropFilter: "blur(6px)",
+                    border: "0.5px solid rgba(255,255,255,0.06)",
+                    borderRadius: 6,
+                    padding: "6px 12px",
+                    pointerEvents: "none",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  release a thought
+                </motion.span>
+              )}
+            </AnimatePresence>
+            <motion.button
+              key="fab-release"
+              type="button"
+              onClick={() => setComposeOpen(true)}
+              aria-label="release a thought"
+              title="release a thought"
+              animate={{
+                boxShadow: [
+                  "0 0 0 0 rgba(196, 122, 58, 0)",
+                  "0 0 22px 4px rgba(196, 122, 58, 0.22)",
+                  "0 0 0 0 rgba(196, 122, 58, 0)",
+                ],
+              }}
+              transition={{
+                boxShadow: { duration: 3.6, repeat: Infinity, ease: "easeInOut" },
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.96 }}
+              style={{
+                width: isMobile ? 60 : 52,
+                height: isMobile ? 60 : 52,
+                borderRadius: "50%",
+                background: "rgba(196, 122, 58, 0.12)",
+                border: "0.5px solid rgba(196, 122, 58, 0.55)",
+                color: "#c47a3a",
+                fontFamily: "var(--font-syne), sans-serif",
+                fontWeight: 300,
+                fontSize: isMobile ? 28 : 24,
+                lineHeight: 1,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)",
+              }}
+            >
+              +
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
     </>

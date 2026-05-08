@@ -84,8 +84,8 @@ export function getThoughtPreview(content: string): string {
 
 export function getCardWidth(content: string): number {
   const len = content.length;
-  if (len < 60) return 160;
-  if (len < 160) return 180;
+  if (len <= 25) return 180;
+  if (len <= 80) return 200;
   return 220;
 }
 
@@ -96,47 +96,45 @@ export interface ThoughtTypography {
   centerVertically: boolean;
   minHeight: number;
   lineClamp: number;
+  textAlign: "left" | "center";
+  lineHeight: number;
 }
 
 export function getThoughtTypography(content: string): ThoughtTypography {
   const len = content.length;
-  if (len <= 30) {
+  if (len <= 25) {
     return {
-      fontSize: 16,
-      fontWeight: 700,
-      padding: "24px 18px 22px 18px",
+      fontSize: 18,
+      fontWeight: 600,
+      padding: "28px 20px",
       centerVertically: true,
       minHeight: 100,
       lineClamp: 3,
+      textAlign: "center",
+      lineHeight: 1.5,
     };
   }
-  if (len <= 60) {
+  if (len <= 80) {
     return {
       fontSize: 14,
       fontWeight: 400,
       padding: "20px 18px 16px 18px",
       centerVertically: false,
       minHeight: 0,
-      lineClamp: 3,
-    };
-  }
-  if (len > 120) {
-    return {
-      fontSize: 12,
-      fontWeight: 400,
-      padding: "20px 18px 16px 18px",
-      centerVertically: false,
-      minHeight: 0,
-      lineClamp: 5,
+      lineClamp: 4,
+      textAlign: "left",
+      lineHeight: 1.65,
     };
   }
   return {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 400,
     padding: "20px 18px 16px 18px",
     centerVertically: false,
     minHeight: 0,
-    lineClamp: 4,
+    lineClamp: 6,
+    textAlign: "left",
+    lineHeight: 1.8,
   };
 }
 

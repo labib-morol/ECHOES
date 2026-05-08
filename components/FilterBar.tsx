@@ -8,11 +8,22 @@ interface FilterBarProps {
   moods: string[];
   activeFilter: string;
   onFilter: (mood: string) => void;
+  onRandom?: () => void;
+  randomEnabled?: boolean;
 }
 
 const ALL = "all";
+const RANDOM = "__random__";
+const ALL_ACTIVE_COLOR = "#c47a3a";
+const RANDOM_COLOR = "#c47a3a";
 
-export default function FilterBar({ moods, activeFilter, onFilter }: FilterBarProps) {
+export default function FilterBar({
+  moods,
+  activeFilter,
+  onFilter,
+  onRandom,
+  randomEnabled,
+}: FilterBarProps) {
   const unique = useMemo(() => Array.from(new Set(moods.filter(Boolean))), [moods]);
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -68,7 +79,7 @@ export default function FilterBar({ moods, activeFilter, onFilter }: FilterBarPr
 
   const renderPill = (label: string, value: string, isFilterable: boolean) => {
     const isActive = activeFilter === value;
-    const color = value === ALL ? "#c4bdb0" : getMoodColor(value);
+    const color = value === ALL ? (isActive ? ALL_ACTIVE_COLOR : "#c4bdb0") : getMoodColor(value);
     const rgb = hexToRgb(color);
     const baseStyle: React.CSSProperties = {
       flexShrink: 0,
@@ -110,29 +121,65 @@ export default function FilterBar({ moods, activeFilter, onFilter }: FilterBarPr
               }
             : undefined
         }
-        animate={
-          isActive
-            ? {
-                opacity: 1,
-                scale: 1,
-                boxShadow: [
-                  `0 0 0 0 rgba(${rgb}, 0)`,
-                  `0 0 8px 1px rgba(${rgb}, 0.2)`,
-                  `0 0 0 0 rgba(${rgb}, 0)`,
-                ],
-              }
-            : { opacity: 1, scale: 1, boxShadow: "0 0 0 0 rgba(0,0,0,0)" }
-        }
-        transition={
-          isActive
-            ? {
-                boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                default: { duration: 0.25, ease: "easeOut" },
-              }
-            : { duration: 0.25, ease: "easeOut" }
-        }
+        animate={{
+          opacity: 1,
+          scale: 1,
+          boxShadow: isActive
+            ? `0 0 12px 2px rgba(${rgb}, 0.25), 0 0 0 0.5px rgba(${rgb}, 0.5)`
+            : "0 0 0 0 rgba(0,0,0,0)",
+        }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
       >
         {isActive ? `[ ${label} ]` : label}
+      </motion.button>
+    );
+  };
+
+  const renderRandomPill = () => {
+    if (!onRandom) return null;
+    const disabled = randomEnabled === false;
+    const rgb = hexToRgb(RANDOM_COLOR);
+    return (
+      <motion.button
+        key={RANDOM}
+        type="button"
+        className="filter-pill"
+        layout
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: disabled ? 0.4 : 1, scale: 1 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        whileHover={
+          disabled
+            ? undefined
+            : {
+                background: `rgba(${rgb}, 0.12)`,
+                borderColor: `rgba(${rgb}, 0.5)`,
+                color: RANDOM_COLOR,
+              }
+        }
+        onClick={() => {
+          if (disabled) return;
+          onRandom();
+        }}
+        aria-label="show a random thought"
+        style={{
+          flexShrink: 0,
+          fontFamily: "var(--font-syne), sans-serif",
+          fontWeight: 300,
+          fontSize: 10,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          padding: "6px 14px",
+          borderRadius: 20,
+          cursor: disabled ? "default" : "pointer",
+          whiteSpace: "nowrap",
+          background: `rgba(${rgb}, 0.06)`,
+          border: `0.5px solid rgba(${rgb}, 0.3)`,
+          color: `rgba(${rgb}, 0.85)`,
+          transition: "color 0.25s ease, background 0.25s ease, border-color 0.25s ease",
+        }}
+      >
+        ✦ random
       </motion.button>
     );
   };
@@ -142,9 +189,20 @@ export default function FilterBar({ moods, activeFilter, onFilter }: FilterBarPr
     searchOpen && !isMobile && q.length > 0 && filteredMoods.length === 0;
 
   const mobileInputWidth = Math.max(80, viewportW - 110);
-  const inputWidth = isMobile ? mobileInputWidth : 160;
+  const desktopInputBoxWidth = 200;
 
-  const searchPillStyle: React.CSSProperties = {
+  const searchInputBoxStyle: React.CSSProperties = {
+    flexShrink: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "4px 10px 4px 12px",
+    borderRadius: 20,
+    border: "0.5px solid #2a2a2a",
+    background: "rgba(255,255,255,0.02)",
+  };
+
+  const desktopSearchPillStyle: React.CSSProperties = {
     flexShrink: 0,
     fontFamily: "var(--font-syne), sans-serif",
     fontWeight: 300,
@@ -163,123 +221,222 @@ export default function FilterBar({ moods, activeFilter, onFilter }: FilterBarPr
     gap: 6,
   };
 
-  const searchInputBoxStyle: React.CSSProperties = {
+  const mobileSearchIconStyle: React.CSSProperties = {
     flexShrink: 0,
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    padding: "4px 10px 4px 12px",
-    borderRadius: 20,
+    height: 34,
+    width: 34,
+    minWidth: 34,
+    borderRadius: "50%",
     border: "0.5px solid #2a2a2a",
     background: "rgba(255,255,255,0.02)",
+    color: "#666",
+    fontSize: 13,
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 4,
   };
+
+  if (isMobile && searchOpen) {
+    return (
+      <div
+        className="filter-bar-mobile-search"
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          padding: "8px 0",
+        }}
+      >
+        <motion.div
+          key="search-input-mobile"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{
+            ...searchInputBoxStyle,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <span style={{ fontSize: 11, lineHeight: 1, color: "#666" }}>🔍</span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="search moods..."
+            className="filter-search"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              width: mobileInputWidth,
+              background: "transparent",
+              border: "none",
+              color: "#c8c4bc",
+              fontFamily: "var(--font-syne), sans-serif",
+              fontWeight: 300,
+              fontSize: 11,
+              caretColor: "#c47a3a",
+              outline: "none",
+              borderRadius: 0,
+              padding: "2px 0",
+            }}
+          />
+          <button
+            type="button"
+            onClick={closeSearch}
+            aria-label="close search"
+            style={{
+              flexShrink: 0,
+              background: "transparent",
+              border: "none",
+              color: "#444",
+              fontSize: 13,
+              lineHeight: 1,
+              cursor: "pointer",
+              padding: "2px 4px",
+            }}
+          >
+            ×
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div
+      className={isMobile ? "filter-bar-mobile" : undefined}
       style={{
         display: "flex",
         gap: 8,
         alignItems: "center",
-        overflowX: "auto",
-        scrollbarWidth: "none",
+        overflow: "hidden",
         padding: "8px 0",
       }}
     >
-      <AnimatePresence initial={false}>
-        {!searchOpen ? (
-          <motion.button
-            key="search-pill"
-            type="button"
-            className="filter-pill"
-            onClick={() => setSearchOpen(true)}
-            aria-label="search moods"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            style={searchPillStyle}
-          >
-            <span style={{ fontSize: 11, lineHeight: 1 }}>🔍</span>
-            <span>search moods</span>
-          </motion.button>
-        ) : (
-          <motion.div
-            key="search-input"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            style={{
-              ...searchInputBoxStyle,
-              flexShrink: isMobile ? 1 : 0,
-              width: inputWidth + 40,
-              maxWidth: "100%",
-            }}
-          >
-            <span style={{ fontSize: 11, lineHeight: 1, color: "#666" }}>🔍</span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="search moods..."
-              className="filter-search"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                width: inputWidth,
-                background: "transparent",
-                border: "none",
-                color: "#c8c4bc",
-                fontFamily: "var(--font-syne), sans-serif",
-                fontWeight: 300,
-                fontSize: 11,
-                caretColor: "#c47a3a",
-                outline: "none",
-                borderRadius: 0,
-                padding: "2px 0",
-              }}
-            />
-            <button
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          flex: 1,
+          minWidth: 0,
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        <AnimatePresence initial={false}>
+          {!isMobile && !searchOpen && (
+            <motion.button
+              key="search-pill"
               type="button"
-              onClick={closeSearch}
-              aria-label="close search"
+              className="filter-pill"
+              onClick={() => setSearchOpen(true)}
+              aria-label="search moods"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              style={desktopSearchPillStyle}
+            >
+              <span style={{ fontSize: 11, lineHeight: 1 }}>🔍</span>
+              <span>search moods</span>
+            </motion.button>
+          )}
+          {!isMobile && searchOpen && (
+            <motion.div
+              key="search-input-desktop"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               style={{
-                flexShrink: 0,
-                background: "transparent",
-                border: "none",
-                color: "#444",
-                fontSize: 13,
-                lineHeight: 1,
-                cursor: "pointer",
-                padding: "2px 4px",
+                ...searchInputBoxStyle,
+                width: desktopInputBoxWidth,
               }}
             >
-              ×
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {showPills && renderPill("✦ all", ALL, false)}
-      {showPills && (
-        <AnimatePresence mode="popLayout" initial={false}>
-          {filteredMoods.map((mood) => renderPill(mood, mood, true))}
+              <span style={{ fontSize: 11, lineHeight: 1, color: "#666" }}>🔍</span>
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="search moods..."
+                className="filter-search"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  width: 140,
+                  background: "transparent",
+                  border: "none",
+                  color: "#c8c4bc",
+                  fontFamily: "var(--font-syne), sans-serif",
+                  fontWeight: 300,
+                  fontSize: 11,
+                  caretColor: "#c47a3a",
+                  outline: "none",
+                  borderRadius: 0,
+                  padding: "2px 0",
+                }}
+              />
+              <button
+                type="button"
+                onClick={closeSearch}
+                aria-label="close search"
+                style={{
+                  flexShrink: 0,
+                  background: "transparent",
+                  border: "none",
+                  color: "#444",
+                  fontSize: 13,
+                  lineHeight: 1,
+                  cursor: "pointer",
+                  padding: "2px 4px",
+                }}
+              >
+                ×
+              </button>
+            </motion.div>
+          )}
         </AnimatePresence>
-      )}
-      {showNoMatches && (
-        <span
-          style={{
-            flexShrink: 0,
-            fontFamily: "var(--font-syne), sans-serif",
-            fontWeight: 300,
-            fontSize: 10,
-            color: "#2a2a2a",
-            paddingLeft: 4,
-          }}
+
+        {showPills && renderPill("✦ all", ALL, false)}
+        {showPills && (
+          <AnimatePresence mode="popLayout" initial={false}>
+            {filteredMoods.map((mood) => renderPill(mood, mood, true))}
+          </AnimatePresence>
+        )}
+        {showPills && renderRandomPill()}
+        {showNoMatches && (
+          <span
+            style={{
+              flexShrink: 0,
+              fontFamily: "var(--font-syne), sans-serif",
+              fontWeight: 300,
+              fontSize: 10,
+              color: "#2a2a2a",
+              paddingLeft: 4,
+            }}
+          >
+            no moods yet
+          </span>
+        )}
+      </div>
+
+      {isMobile && (
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          aria-label="search moods"
+          style={mobileSearchIconStyle}
         >
-          no moods yet
-        </span>
+          🔍
+        </button>
       )}
     </div>
   );

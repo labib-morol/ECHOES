@@ -14,7 +14,8 @@
       "Bash(\"/c/Program Files/nodejs/npm.cmd\" install groq-sdk)",
       "Bash(npm.cmd install *)",
       "Bash(npx.cmd tsc *)",
-      "Bash(npx.cmd next *)"
+      "Bash(npx.cmd next *)",
+      "Bash(npm.cmd run *)"
     ]
   }
 }

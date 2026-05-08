@@ -42,6 +42,11 @@ body::after {
       rgba(13, 11, 9, 0) 65%
     ),
     radial-gradient(
+      ellipse 100% 40% at 50% 100%,
+      rgba(20, 16, 30, 0.4) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
       ellipse 130% 110% at 50% 50%,
       rgba(0, 0, 0, 0) 38%,
       rgba(0, 0, 0, 0.78) 100%
@@ -105,7 +110,32 @@ body::before {
 .sticky-bar {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 40;
+}
+
+/* Filter-bar right-fade hint (mobile) */
+.filter-bar-mobile {
+  position: relative;
+}
+.filter-bar-mobile::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(13, 11, 9, 0), rgba(13, 11, 9, 0.95));
+}
+
+/* Focus rings — accessible, on-brand */
+:focus-visible {
+  outline: 1.5px solid rgba(196, 122, 58, 0.6);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.wall-card:focus-visible {
+  outline-offset: 4px;
 }
 
 @keyframes echoes-pulse {
@@ -118,21 +148,30 @@ body::before {
 }
 
 @keyframes echoes-shimmer {
-  0% { background-position: -200px 0; }
-  100% { background-position: 200px 0; }
+  0% { background-position: -300px 0; }
+  100% { background-position: 300px 0; }
 }
 
 .skeleton-shimmer {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: #1a1814;
   background-image: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.07) 50%,
-    rgba(255, 255, 255, 0.03) 100%
+    #1a1814 0%,
+    #242018 50%,
+    #1a1814 100%
   );
-  background-size: 400px 100%;
+  background-size: 600px 100%;
   background-repeat: no-repeat;
-  animation: echoes-shimmer 1.8s linear infinite;
+  animation: echoes-shimmer 2s linear infinite;
+}
+
+/* Medium-screen top bar — keep input from overflowing or wrapping buttons */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .key-input {
+    width: 100% !important;
+    min-width: 100px !important;
+    max-width: 160px !important;
+  }
 }
 
 @media (max-width: 767px) {
@@ -143,24 +182,45 @@ body::before {
   }
 
   .wall {
-    column-count: 2;
-    column-gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     min-height: 60vh;
     padding: 8px 4px;
+    column-count: unset;
+    column-gap: unset;
   }
 
   .wall-card {
     position: static !important;
-    transform: none !important;
-    display: inline-block;
-    width: 100%;
-    margin: 0 0 10px 0;
-    break-inside: avoid;
+    width: 100% !important;
+    margin: 0 !important;
+    display: block;
+    break-inside: auto;
+  }
+
+  .wall-card[data-depth] {
     filter: none !important;
   }
 
   .thought-card-inner {
     transform: none !important;
+    border-radius: 12px !important;
+    padding: 20px 22px 18px !important;
+  }
+
+  .thought-card-inner p {
+    text-align: left !important;
+  }
+
+  .felt-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+    right: 6px !important;
+    bottom: 4px !important;
+    font-size: 16px !important;
   }
 
   .fracture-lines {
@@ -168,12 +228,15 @@ body::before {
   }
 
   .filter-pill {
-    padding: 9px 18px !important;
+    padding: 10px 16px !important;
     font-size: 11px !important;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .sticky-bar {
-    padding: 20px 16px 12px !important;
+    padding: 16px 16px 10px !important;
   }
 }
 
@@ -186,18 +249,24 @@ body::before {
   .top-bar-actions {
     width: 100%;
     justify-content: flex-start !important;
+    gap: 8px !important;
   }
 
   .top-bar-actions form {
     flex: 1;
+    min-width: 0;
   }
 
   .top-bar-actions form input {
     flex: 1;
     width: auto !important;
+    min-width: 0;
   }
 
-  .top-bar-actions > button {
+  .release-btn {
     flex: 1;
+    height: 48px;
+    font-size: 13px !important;
+    padding: 12px 16px !important;
   }
 }

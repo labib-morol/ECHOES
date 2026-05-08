@@ -10,14 +10,15 @@ export interface ShareableThought {
 }
 
 const FRAME_WIDTH = 1080;
-const FRAME_HEIGHT = 1920;
+const FRAME_HEIGHT = 1080;
+const FRAME_URL = "echoes-smoky.vercel.app";
 
 function pickFontSize(len: number): number {
-  if (len <= 80) return 64;
-  if (len <= 200) return 52;
-  if (len <= 500) return 38;
-  if (len <= 1000) return 30;
-  return 24;
+  if (len <= 60) return 36;
+  if (len <= 140) return 34;
+  if (len <= 260) return 32;
+  if (len <= 500) return 30;
+  return 28;
 }
 
 function buildNode(thought: ShareableThought): HTMLElement {
@@ -28,23 +29,23 @@ function buildNode(thought: ShareableThought): HTMLElement {
     "top: 0",
     `width: ${FRAME_WIDTH}px`,
     `height: ${FRAME_HEIGHT}px`,
-    "background: radial-gradient(ellipse 75% 55% at 50% 42%, rgba(36,32,26,0.65) 0%, rgba(13,11,9,0) 65%), radial-gradient(ellipse 130% 110% at 50% 50%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.78) 100%), #0d0b09",
+    "background: radial-gradient(ellipse 75% 55% at 50% 42%, rgba(36,32,26,0.65) 0%, rgba(13,11,9,0) 65%), radial-gradient(ellipse 100% 40% at 50% 100%, rgba(20,16,30,0.4) 0%, transparent 70%), radial-gradient(ellipse 130% 110% at 50% 50%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.78) 100%), #0d0b09",
     "display: flex",
     "flex-direction: column",
     "justify-content: center",
     "align-items: center",
-    "padding: 140px 110px 180px",
+    "padding: 80px",
     "box-sizing: border-box",
     "overflow: hidden",
   ].join(";");
 
   const hairline = document.createElement("div");
   hairline.style.cssText = [
-    "width: 64px",
+    "width: 56px",
     "height: 1px",
     `background: ${thought.mood_color}`,
-    "opacity: 0.65",
-    "margin-bottom: 64px",
+    "opacity: 0.6",
+    "margin-bottom: 44px",
   ].join(";");
   root.appendChild(hairline);
 
@@ -56,7 +57,7 @@ function buildNode(thought: ShareableThought): HTMLElement {
     "font-style: italic",
     "font-weight: 400",
     `font-size: ${fontSize}px`,
-    "color: #ece5d6",
+    "color: #ede8de",
     "text-align: center",
     "line-height: 1.45",
     "letter-spacing: -0.005em",
@@ -65,38 +66,70 @@ function buildNode(thought: ShareableThought): HTMLElement {
     "white-space: pre-wrap",
     "word-break: break-word",
     "text-shadow: 0 2px 6px rgba(0,0,0,0.55)",
+    "font-feature-settings: \"liga\" 1, \"kern\" 1",
   ].join(";");
   root.appendChild(thoughtEl);
 
   const moodEl = document.createElement("div");
   moodEl.textContent = thought.mood;
   moodEl.style.cssText = [
-    "margin-top: 60px",
+    "margin-top: 40px",
     "font-family: var(--font-syne), 'Syne', sans-serif",
     "font-weight: 300",
-    "font-size: 18px",
+    "font-size: 13px",
     `color: ${thought.mood_color}`,
-    "opacity: 0.6",
     "text-transform: uppercase",
     "letter-spacing: 0.32em",
   ].join(";");
   root.appendChild(moodEl);
 
-  const watermark = document.createElement("div");
-  watermark.textContent = "echoes.";
-  watermark.style.cssText = [
+  const footer = document.createElement("div");
+  footer.style.cssText = [
     "position: absolute",
-    "bottom: 90px",
+    "bottom: 80px",
     "left: 50%",
     "transform: translateX(-50%)",
+    "display: flex",
+    "flex-direction: column",
+    "align-items: center",
+    "gap: 6px",
+  ].join(";");
+
+  const footerSeparator = document.createElement("div");
+  footerSeparator.style.cssText = [
+    "width: 24px",
+    "height: 1px",
+    "background: rgba(255,255,255,0.08)",
+    "margin-bottom: 8px",
+  ].join(";");
+  footer.appendChild(footerSeparator);
+
+  const wordmark = document.createElement("div");
+  wordmark.textContent = "echoes.";
+  wordmark.style.cssText = [
     "font-family: var(--font-playfair), 'Playfair Display', Georgia, serif",
     "font-style: italic",
     "font-weight: 400",
-    "font-size: 22px",
-    "color: #5a544a",
+    "font-size: 16px",
+    "color: #555",
     "letter-spacing: -0.01em",
+    "line-height: 1",
   ].join(";");
-  root.appendChild(watermark);
+  footer.appendChild(wordmark);
+
+  const url = document.createElement("div");
+  url.textContent = FRAME_URL;
+  url.style.cssText = [
+    "font-family: var(--font-syne), 'Syne', sans-serif",
+    "font-weight: 300",
+    "font-size: 11px",
+    "color: #333",
+    "letter-spacing: 0.08em",
+    "line-height: 1",
+  ].join(";");
+  footer.appendChild(url);
+
+  root.appendChild(footer);
 
   return root;
 }

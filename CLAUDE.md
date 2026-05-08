@@ -151,3 +151,25 @@ See schema.sql in this folder.
 - Felt: ripple + border flash + ember scale pulse
 - Filter: dim non-matching cards to 0.15 opacity instead of hiding
 - Mobile: 2-column masonry, no rotation, sticky top bars
+
+## Phase 3 complete — production + mobile
+- Deployment: Vercel (echoes-smoky.vercel.app)
+- Mobile: single-column scroll, bottom-sheet expand (drag-to-dismiss),
+  FAB primary CTA (60px) with first-visit "release a thought" label,
+  key input collapses to a 🗝 toggle, full-width [+ release], 44×44 felt buttons
+- Filter bar: search-pill on desktop, search-icon on mobile with right-fade,
+  "✦ random" pill that expands a random matching thought via lifted expanded state,
+  active pills show a static dual-glow tinted by the mood
+- Visual: third radial (cool blue-purple bottom) + warm center + outer vignette,
+  cards now have a soft 160deg base gradient + top highlight + mood-color wash,
+  thought text #ede8de with ligatures, mood tag whisper (8px / 0.28em / 0.35α / · prefix)
+- Card expand: layoutId morph on desktop (max-w 340), bottom-sheet on mobile (75vh, drag handle)
+- New features: share-as-image (1080×1080 PNG via html-to-image, Web Share + download),
+  thought counter in footer, "✦ random" button, ambient sound stub (toast: coming soon),
+  late-night indicator, first-visit onboarding overlay
+- Performance: warm shimmer skeleton (#1a1814 → #242018), 8 desktop / 3 mobile
+- Toasts: bottom-center desktop / top-center mobile, 2px type-colored left border,
+  3s lifetime, info/success/error
+- Accessibility: visible focus rings (1.5px ember at offset 3px), Escape closes modals,
+  cards Tab-focusable with Enter/Space to expand, drag-to-dismiss on mobile bottom sheet
+- OG metadata: SVG at /public/og-image.svg, summary_large_image Twitter card

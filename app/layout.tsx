@@ -23,8 +23,29 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://echoes-smoky.vercel.app"),
   title: "echoes — throw it into the dark",
-  description: "throw your thoughts into the dark.",
+  description:
+    "an anonymous wall of thoughts. no accounts. no names. they fade in 30 days.",
+  openGraph: {
+    title: "echoes.",
+    description: "throw your thoughts into the dark.",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "echoes — throw it into the dark",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "echoes.",
+    description: "throw your thoughts into the dark.",
+    images: ["/og-image.svg"],
+  },
 };
 
 export const viewport: Viewport = {

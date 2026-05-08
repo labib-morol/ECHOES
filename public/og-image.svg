@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="warm" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="rgb(36,32,26)" stop-opacity="0.65" />
+      <stop offset="65%" stop-color="rgb(13,11,9)" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="cool" cx="50%" cy="100%" r="50%">
+      <stop offset="0%" stop-color="rgb(20,16,30)" stop-opacity="0.45" />
+      <stop offset="70%" stop-color="rgb(13,11,9)" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="65%">
+      <stop offset="38%" stop-color="rgb(0,0,0)" stop-opacity="0" />
+      <stop offset="100%" stop-color="rgb(0,0,0)" stop-opacity="0.78" />
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0d0b09" />
+  <rect width="1200" height="630" fill="url(#warm)" />
+  <rect width="1200" height="630" fill="url(#cool)" />
+  <rect width="1200" height="630" fill="url(#vignette)" />
+
+  <line x1="568" y1="246" x2="632" y2="246" stroke="#c47a3a" stroke-opacity="0.45" stroke-width="1" />
+
+  <text
+    x="600"
+    y="318"
+    text-anchor="middle"
+    font-family="'Playfair Display', Georgia, serif"
+    font-style="italic"
+    font-weight="400"
+    font-size="92"
+    fill="#e6dfd2"
+    letter-spacing="-2"
+  >echoes.</text>
+
+  <text
+    x="600"
+    y="378"
+    text-anchor="middle"
+    font-family="'Playfair Display', Georgia, serif"
+    font-style="italic"
+    font-weight="400"
+    font-size="22"
+    fill="#5a544a"
+  >throw your thoughts into the dark.</text>
+
+  <text
+    x="600"
+    y="546"
+    text-anchor="middle"
+    font-family="'Syne', sans-serif"
+    font-weight="300"
+    font-size="13"
+    fill="#3a3733"
+    letter-spacing="4"
+  >ANONYMOUS · EPHEMERAL · 30 DAYS</text>
+</svg>
