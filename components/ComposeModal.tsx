@@ -10,15 +10,17 @@ interface ComposeModalProps {
   onRateLimited?: (message: string) => void;
 }
 
-const MAX_LEN = 280;
+const MAX_LEN = 2000;
+const WARM_THRESHOLD = 1700;
+const EMBER_THRESHOLD = 1900;
 const ACCENT = "#c4bdb0";
 const ACCENT_RGB = "168, 156, 138";
 
 type CounterBand = "calm" | "warm" | "ember";
 
 function bandFor(used: number): CounterBand {
-  if (used <= 200) return "calm";
-  if (used <= 250) return "warm";
+  if (used <= WARM_THRESHOLD) return "calm";
+  if (used <= EMBER_THRESHOLD) return "warm";
   return "ember";
 }
 
@@ -162,7 +164,8 @@ export default function ComposeModal({ onClose, onPosted, onRateLimited }: Compo
                 className="compose-textarea"
                 style={{
                   width: "100%",
-                  minHeight: 120,
+                  minHeight: 140,
+                  maxHeight: "40vh",
                   resize: "none",
                   background: "transparent",
                   border: "none",
@@ -178,6 +181,7 @@ export default function ComposeModal({ onClose, onPosted, onRateLimited }: Compo
                   caretColor: ACCENT,
                   lineHeight: 1.7,
                   padding: "4px 0 8px",
+                  overflowY: "auto",
                   transition: "border-color 0.2s ease",
                 }}
               />

@@ -7,7 +7,7 @@ import FilterBar from "@/components/FilterBar";
 import ComposeModal from "@/components/ComposeModal";
 import AboutModal from "@/components/AboutModal";
 import type { Thought } from "@/lib/types";
-import { formatRelativeTime } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 type ToastType = "success" | "error" | "info";
 const TOAST_COLOR: Record<ToastType, string> = {
@@ -20,6 +20,17 @@ const TITLE_COMPOSE = "echoes — say something";
 
 const WORDMARK = "echoes.";
 const TITLE_PLAYED_KEY = "echoes:title-animated";
+const ONBOARDING_KEY = "echoes:onboarded:v1";
+
+function buildNightLabel(): string | null {
+  const d = new Date();
+  const h = d.getHours();
+  if (h < 22 && h >= 5) return null;
+  const m = d.getMinutes().toString().padStart(2, "0");
+  const hour12 = ((h + 11) % 12) + 1;
+  const ampm = h < 12 ? "am" : "pm";
+  return `wall active · ${hour12}:${m}${ampm}`;
+}
 
 const ALL = "all";
 const REFETCH_INTERVAL_MS = 60_000;
@@ -44,10 +55,6 @@ function loadThoughts(signal?: AbortSignal): Promise<Thought[]> {
     .catch(() => []);
 }
 
-function pad2(n: number) {
-  return n.toString().padStart(2, "0");
-}
-
 export default function Home() {
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [ownThoughtIds, setOwnThoughtIds] = useState<string[]>([]);
@@ -58,25 +65,52 @@ export default function Home() {
   const [toast, setToast] = useState<{ id: number; message: string; type: ToastType } | null>(null);
   const [loading, setLoading] = useState(true);
   const toastTimerRef = useRef<number | null>(null);
-  const [clock, setClock] = useState<string>("");
   const [animateWordmark, setAnimateWordmark] = useState<boolean | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const [thoughtCount, setThoughtCount] = useState<number | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [nightLabel, setNightLabel] = useState<string | null>(null);
+  const composeOpenRef = useRef(composeOpen);
+
+  useEffect(() => {
+    composeOpenRef.current = composeOpen;
+  }, [composeOpen]);
+
+  useEffect(() => {
+    let dismissTimer: number | null = null;
+    try {
+      if (window.localStorage.getItem(ONBOARDING_KEY) !== "1") {
+        setShowOnboarding(true);
+        dismissTimer = window.setTimeout(() => setShowOnboarding(false), 4200);
+      }
+    } catch {}
+    return () => {
+      if (dismissTimer !== null) window.clearTimeout(dismissTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showOnboarding) {
+      try {
+        window.localStorage.setItem(ONBOARDING_KEY, "1");
+      } catch {}
+    }
+  }, [showOnboarding]);
+
+  useEffect(() => {
+    setNightLabel(buildNightLabel());
+    const id = window.setInterval(() => setNightLabel(buildNightLabel()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const dismissOnboarding = useCallback(() => setShowOnboarding(false), []);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 4);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      setClock(`${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`);
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -108,6 +142,81 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel("echoes-thoughts-arrivals")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "thoughts" },
+          (payload) => {
+            if (!active) return;
+            if (composeOpenRef.current) return;
+            const row = payload.new as Record<string, unknown>;
+            const incoming: Thought = {
+              id: String(row.id),
+              content: String(row.content ?? ""),
+              mood: String(row.mood ?? "untagged"),
+              mood_color: String(row.mood_color ?? "#888888"),
+              is_crisis: Boolean(row.is_crisis),
+              created_at: String(row.created_at ?? new Date().toISOString()),
+              expires_at: String(row.expires_at ?? new Date().toISOString()),
+              position_x: Number(row.position_x) || 50,
+              position_y: Number(row.position_y) || 50,
+              rotation: Number(row.rotation) || 0,
+              opacity_level: Number(row.opacity_level) || 0.8,
+            };
+            setThoughts((prev) =>
+              prev.some((p) => p.id === incoming.id) ? prev : [incoming, ...prev]
+            );
+            setNewIds((prev) => {
+              const next = new Set(prev);
+              next.add(incoming.id);
+              return next;
+            });
+            window.setTimeout(() => {
+              setNewIds((prev) => {
+                if (!prev.has(incoming.id)) return prev;
+                const next = new Set(prev);
+                next.delete(incoming.id);
+                return next;
+              });
+            }, 1800);
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.error("[echoes:realtime] subscribe failed:", err);
+    }
+    return () => {
+      active = false;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("thoughts")
+          .select("id", { count: "exact", head: true })
+          .gt("expires_at", new Date().toISOString());
+        if (!cancelled && !error && typeof count === "number") {
+          setThoughtCount(count);
+        }
+      } catch {}
+    };
+    fetchCount();
+    const id = window.setInterval(fetchCount, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
   const isUnlocked = ownThoughtIds.length > 0;
 
   const visibleThoughts = useMemo(() => {
@@ -117,13 +226,6 @@ export default function Home() {
   }, [thoughts, ownThoughtIds, isUnlocked]);
 
   const moods = useMemo(() => visibleThoughts.map((t) => t.mood), [visibleThoughts]);
-
-  const lastEchoLabel = useMemo(() => {
-    const latest = thoughts[0];
-    if (!latest) return "—";
-    const rel = formatRelativeTime(latest.created_at);
-    return rel || "—";
-  }, [thoughts]);
 
   const showToast = useCallback((message: string, type: ToastType) => {
     if (toastTimerRef.current !== null) {
@@ -223,17 +325,6 @@ export default function Home() {
     };
   }, []);
 
-  const cornerStyle: React.CSSProperties = {
-    position: "fixed",
-    fontFamily: MONO_STACK,
-    fontSize: 9,
-    letterSpacing: "0.18em",
-    color: "#3a3733",
-    pointerEvents: "none",
-    zIndex: 35,
-    textTransform: "uppercase",
-  };
-
   return (
     <>
       <div
@@ -265,18 +356,49 @@ export default function Home() {
         </span>
       </div>
 
-      <span aria-hidden="true" style={{ ...cornerStyle, top: 14, left: 18 }}>
-        // sec.A — fragments
-      </span>
-      <span aria-hidden="true" style={{ ...cornerStyle, top: 14, right: 18 }}>
-        {clock || "00:00:00"} · local
-      </span>
-      <span aria-hidden="true" style={{ ...cornerStyle, bottom: 14, left: 18 }}>
-        ECHO_v0.1 · 30d.expiry
-      </span>
-      <span aria-hidden="true" style={{ ...cornerStyle, bottom: 14, right: 18 }}>
-        last release · {lastEchoLabel}
-      </span>
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            key="onboarding"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.9, ease: "easeOut" }}
+            onClick={dismissOnboarding}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 70,
+              background: "#0d0b09",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 32,
+              cursor: "pointer",
+            }}
+          >
+            <motion.p
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 1.4, ease: "easeOut", delay: 0.2 }}
+              style={{
+                fontFamily: "var(--font-playfair), serif",
+                fontStyle: "italic",
+                fontSize: 18,
+                color: "#d4cfc7",
+                textAlign: "center",
+                maxWidth: 360,
+                lineHeight: 1.55,
+                margin: 0,
+                letterSpacing: "0.005em",
+              }}
+            >
+              this is a place for thoughts that have nowhere else to go.
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {toast && (
@@ -315,7 +437,7 @@ export default function Home() {
       <div
         className="sticky-bar"
         style={{
-          padding: "32px 40px 12px",
+          padding: "12px 40px 8px",
           background: isScrolled ? "rgba(13,11,9,0.85)" : "transparent",
           backdropFilter: isScrolled ? "blur(12px)" : "none",
           WebkitBackdropFilter: isScrolled ? "blur(12px)" : "none",
@@ -330,93 +452,55 @@ export default function Home() {
             display: "flex",
             flexWrap: "wrap",
             justifyContent: "space-between",
-            alignItems: "flex-end",
+            alignItems: "center",
             gap: 16,
-            marginBottom: 20,
+            marginBottom: 10,
+            maxHeight: 60,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <h1
               style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 12,
-                color: "#d4cfc7",
+                fontFamily: "var(--font-playfair), serif",
+                fontStyle: "italic",
+                fontSize: 24,
+                color: "#e6dfd2",
+                lineHeight: 1,
+                margin: 0,
+                fontWeight: 400,
+                letterSpacing: "-0.02em",
+                display: "inline-flex",
               }}
             >
-              <span
-                style={{
-                  fontFamily: MONO_STACK,
-                  fontSize: 10,
-                  color: "#5a554c",
-                  letterSpacing: "0.2em",
-                  textTransform: "uppercase",
-                  marginBottom: 8,
-                }}
-              >
-                //
-              </span>
-              <h1
-                style={{
-                  fontFamily: "var(--font-playfair), serif",
-                  fontStyle: "italic",
-                  fontSize: 44,
-                  color: "#e6dfd2",
-                  lineHeight: 1,
-                  margin: 0,
-                  fontWeight: 400,
-                  letterSpacing: "-0.02em",
-                  display: "inline-flex",
-                }}
-              >
-                {animateWordmark === null
-                  ? WORDMARK
-                  : WORDMARK.split("").map((ch, i) => (
-                      <motion.span
-                        key={i}
-                        initial={
-                          animateWordmark ? { opacity: 0, y: -4 } : { opacity: 1, y: 0 }
-                        }
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={
-                          animateWordmark
-                            ? { delay: i * 0.06, duration: 0.34, ease: [0.22, 1, 0.36, 1] }
-                            : { duration: 0 }
-                        }
-                        style={{ display: "inline-block" }}
-                      >
-                        {ch}
-                      </motion.span>
-                    ))}
-              </h1>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                fontFamily: MONO_STACK,
-                fontSize: 9,
-                color: "#4d4842",
-                textTransform: "uppercase",
-                letterSpacing: "0.16em",
-              }}
-            >
-              <span>anonymous</span>
-              <span style={{ color: "#2a2520" }}>—</span>
-              <span>ephemeral</span>
-              <span style={{ color: "#2a2520" }}>—</span>
-              <span>uncensored</span>
-            </div>
+              {animateWordmark === null
+                ? WORDMARK
+                : WORDMARK.split("").map((ch, i) => (
+                    <motion.span
+                      key={i}
+                      initial={
+                        animateWordmark ? { opacity: 0, y: -4 } : { opacity: 1, y: 0 }
+                      }
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={
+                        animateWordmark
+                          ? { delay: i * 0.06, duration: 0.34, ease: [0.22, 1, 0.36, 1] }
+                          : { duration: 0 }
+                      }
+                      style={{ display: "inline-block" }}
+                    >
+                      {ch}
+                    </motion.span>
+                  ))}
+            </h1>
 
             <div
               style={{
                 fontFamily: "var(--font-playfair), serif",
                 fontStyle: "italic",
-                fontSize: 12,
+                fontSize: 11,
                 color: "#5a544a",
                 letterSpacing: "0.01em",
+                lineHeight: 1.2,
               }}
             >
               throw it into the dark · it fades in 30 days
@@ -538,7 +622,7 @@ export default function Home() {
       <main
         style={{
           minHeight: "100vh",
-          padding: "16px 40px 80px",
+          padding: "40px 40px 80px",
           position: "relative",
           zIndex: 1,
         }}
@@ -608,6 +692,7 @@ export default function Home() {
             <Wall
               thoughts={visibleThoughts}
               ownThoughtIds={ownThoughtIds}
+              newIds={newIds}
               activeFilter={activeFilter}
               onFelt={handleFelt}
             />
@@ -633,11 +718,73 @@ export default function Home() {
             fontSize: 9,
             color: "#1e1e1c",
             letterSpacing: "0.08em",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          thoughts disappear after 30 days  ·  no accounts  ·  no data collected
+          <div>thoughts disappear after 30 days  ·  no accounts  ·  no data collected</div>
+          {thoughtCount !== null && (
+            <div>[{thoughtCount.toLocaleString()} thoughts released]</div>
+          )}
+          {nightLabel && <div style={{ color: "#2a2826" }}>{nightLabel}</div>}
         </footer>
       </main>
+
+      <AnimatePresence>
+        {!composeOpen && !aboutOpen && !showOnboarding && (
+          <motion.button
+            key="fab-release"
+            type="button"
+            onClick={() => setComposeOpen(true)}
+            aria-label="release a thought"
+            title="release a thought"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              boxShadow: [
+                "0 0 0 0 rgba(196, 122, 58, 0)",
+                "0 0 22px 4px rgba(196, 122, 58, 0.22)",
+                "0 0 0 0 rgba(196, 122, 58, 0)",
+              ],
+            }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{
+              opacity: { duration: 0.4, ease: "easeOut" },
+              scale: { duration: 0.4, ease: "easeOut" },
+              boxShadow: { duration: 3.6, repeat: Infinity, ease: "easeInOut" },
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.96 }}
+            style={{
+              position: "fixed",
+              right: 24,
+              bottom: 24,
+              zIndex: 35,
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: "rgba(196, 122, 58, 0.12)",
+              border: "0.5px solid rgba(196, 122, 58, 0.55)",
+              color: "#c47a3a",
+              fontFamily: "var(--font-syne), sans-serif",
+              fontWeight: 300,
+              fontSize: 24,
+              lineHeight: 1,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+            }}
+          >
+            +
+          </motion.button>
+        )}
+      </AnimatePresence>
     </>
   );
 }

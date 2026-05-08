@@ -12,7 +12,9 @@
       "Bash(\"/c/Program Files/nodejs/npx.cmd\" tsc --noEmit)",
       "Bash(\"/c/Program Files/nodejs/npm.cmd\" uninstall groq)",
       "Bash(\"/c/Program Files/nodejs/npm.cmd\" install groq-sdk)",
-      "Bash(npm.cmd install *)"
+      "Bash(npm.cmd install *)",
+      "Bash(npx.cmd tsc *)",
+      "Bash(npx.cmd next *)"
     ]
   }
 }

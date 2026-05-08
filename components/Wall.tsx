@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { useMemo } from "react";
 import type { Thought } from "@/lib/types";
 import ThoughtCard from "@/components/ThoughtCard";
@@ -10,30 +10,64 @@ import EmberParticles from "@/components/EmberParticles";
 interface WallProps {
   thoughts: Thought[];
   ownThoughtIds: string[];
+  newIds: Set<string>;
   activeFilter: string;
   onFelt: (id: string) => void;
 }
 
-export default function Wall({ thoughts, ownThoughtIds, activeFilter, onFelt }: WallProps) {
+const MIN_X = 2;
+const MAX_X = 78;
+
+function clampX(x: number): number {
+  if (Number.isNaN(x)) return MIN_X;
+  return Math.min(MAX_X, Math.max(MIN_X, x));
+}
+
+const wallVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      opacity: { duration: 0.8, ease: "easeOut" },
+      delayChildren: 0.4,
+      staggerChildren: 0.12,
+    },
+  },
+};
+
+export default function Wall({ thoughts, ownThoughtIds, newIds, activeFilter, onFelt }: WallProps) {
   const ownSet = useMemo(() => new Set(ownThoughtIds), [ownThoughtIds]);
   const isAll = activeFilter === "all";
 
+  const placedThoughts = useMemo(
+    () =>
+      thoughts.map((t) =>
+        t.position_x === clampX(t.position_x) ? t : { ...t, position_x: clampX(t.position_x) }
+      ),
+    [thoughts]
+  );
+
   return (
-    <div className="wall">
+    <motion.div
+      className="wall"
+      variants={wallVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <FractureLines />
       <EmberParticles />
       <AnimatePresence mode="popLayout">
-        {thoughts.map((thought, index) => (
+        {placedThoughts.map((thought) => (
           <ThoughtCard
             key={thought.id}
             thought={thought}
             isOwn={ownSet.has(thought.id)}
-            index={index}
+            isNew={newIds.has(thought.id)}
             isMatched={isAll || thought.mood === activeFilter}
             onFelt={onFelt}
           />
         ))}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

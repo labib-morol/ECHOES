@@ -1,4 +1,4 @@
-import type { Thought } from "@/lib/types";
+type WallPosition = { position_x: number; position_y: number };
 
 const KEY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -68,11 +68,34 @@ export function getArchiveNumber(id: string): string {
   return num.toString().padStart(3, "0");
 }
 
+const PREVIEW_MAX = 110;
+const PREVIEW_LOOKAHEAD = 140;
+const PREVIEW_MIN_SENTENCE = 30;
+
+export function getThoughtPreview(content: string): string {
+  const trimmed = content.trim();
+  if (trimmed.length <= PREVIEW_MAX) return trimmed;
+
+  const window = trimmed.slice(0, PREVIEW_LOOKAHEAD);
+  const sentenceMatch = window.match(/[.!?\n]/);
+  if (sentenceMatch && typeof sentenceMatch.index === "number") {
+    const idx = sentenceMatch.index;
+    if (idx >= PREVIEW_MIN_SENTENCE) {
+      return trimmed.slice(0, idx + 1).trim();
+    }
+  }
+
+  const cut = trimmed.slice(0, PREVIEW_MAX);
+  const lastSpace = cut.lastIndexOf(" ");
+  const sliced = lastSpace > 60 ? cut.slice(0, lastSpace) : cut;
+  return sliced.trim() + "…";
+}
+
 export function getCardWidth(content: string): number {
   const len = content.length;
-  if (len < 60) return 150;
+  if (len < 60) return 160;
   if (len < 160) return 180;
-  return 210;
+  return 220;
 }
 
 export interface ThoughtTypography {
@@ -175,31 +198,56 @@ export function getMoodColor(mood: string): string {
 }
 
 export function assignPositions(
-  existingThoughts: Thought[]
+  existing: WallPosition[]
 ): { position_x: number; position_y: number; rotation: number; opacity_level: number } {
-  const MIN_DISTANCE = 12;
-  const MAX_ATTEMPTS = 60;
+  const X_MIN = 4;
+  const X_MAX = 76;
+  const Y_MIN = 6;
+  const Y_MAX = 92;
+  const COLS = 5;
+  const ROWS = 5;
+  const cellW = (X_MAX - X_MIN) / COLS;
+  const cellH = (Y_MAX - Y_MIN) / ROWS;
 
-  let position_x = 0;
-  let position_y = 0;
+  let bestScore = -Infinity;
+  let bestCells: { cx: number; cy: number }[] = [];
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    position_x = 5 + Math.random() * 80;
-    position_y = 5 + Math.random() * 80;
-
-    let collides = false;
-    for (const t of existingThoughts) {
-      const dx = t.position_x - position_x;
-      const dy = t.position_y - position_y;
-      if (Math.sqrt(dx * dx + dy * dy) < MIN_DISTANCE) {
-        collides = true;
-        break;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cx = X_MIN + cellW * (c + 0.5);
+      const cy = Y_MIN + cellH * (r + 0.5);
+      let minDist = Infinity;
+      for (const t of existing) {
+        const dx = t.position_x - cx;
+        const dy = t.position_y - cy;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < minDist) minDist = d;
+      }
+      if (minDist > bestScore) {
+        bestScore = minDist;
+        bestCells = [{ cx, cy }];
+      } else if (minDist === bestScore) {
+        bestCells.push({ cx, cy });
       }
     }
-    if (!collides) break;
   }
 
-  const rotation = Math.random() * 12 - 6;
+  const chosen = bestCells.length > 0
+    ? bestCells[Math.floor(Math.random() * bestCells.length)]
+    : { cx: X_MIN + (X_MAX - X_MIN) / 2, cy: Y_MIN + (Y_MAX - Y_MIN) / 2 };
+
+  const jitterX = cellW * 0.3;
+  const jitterY = cellH * 0.3;
+  const position_x = Math.max(
+    X_MIN,
+    Math.min(X_MAX, chosen.cx + (Math.random() - 0.5) * 2 * jitterX)
+  );
+  const position_y = Math.max(
+    Y_MIN,
+    Math.min(Y_MAX, chosen.cy + (Math.random() - 0.5) * 2 * jitterY)
+  );
+
+  const rotation = (Math.random() - 0.5) * 6;
   const opacity_level = 0.6 + Math.random() * 0.4;
 
   return { position_x, position_y, rotation, opacity_level };

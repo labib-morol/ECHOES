@@ -72,6 +72,22 @@ body::before {
   border-bottom-color: #2a2a2a;
 }
 
+.felt-btn:not(:disabled):hover {
+  color: #c47a3a !important;
+}
+
+.filter-search::placeholder {
+  color: #2a2a2a;
+}
+
+.wall-card[data-depth="far"] {
+  filter: blur(0.4px);
+}
+.wall-card[data-depth="mid"],
+.wall-card[data-depth="near"] {
+  filter: none;
+}
+
 .wall {
   position: relative;
   width: 100%;
@@ -136,6 +152,7 @@ body::before {
     width: 100%;
     margin: 0 0 10px 0;
     break-inside: avoid;
+    filter: none !important;
   }
 
   .thought-card-inner {

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     const content = body.content.trim();
-    if (content.length < 3 || content.length > 280) {
+    if (content.length < 3 || content.length > 2000) {
       console.error(
         `[echoes:thoughts:POST] content length out of range: ${content.length}`
       );
@@ -100,7 +100,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const { position_x, position_y, rotation, opacity_level } = assignPositions([]);
+    let existingPositions: { position_x: number; position_y: number }[] = [];
+    try {
+      const { data: positions, error: posError } = await supabase
+        .from("thoughts")
+        .select("position_x, position_y")
+        .gt("expires_at", new Date().toISOString());
+      if (!posError && Array.isArray(positions)) {
+        existingPositions = positions as { position_x: number; position_y: number }[];
+      }
+    } catch (err) {
+      console.error("[echoes:thoughts:POST] could not read positions, placing blind:", err);
+    }
+
+    const { position_x, position_y, rotation, opacity_level } = assignPositions(existingPositions);
 
     const key = generateKey();
 
