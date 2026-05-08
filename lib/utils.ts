@@ -59,15 +59,6 @@ export async function hashKey(key: string): Promise<string> {
   return hex;
 }
 
-export function getArchiveNumber(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  }
-  const num = Math.abs(hash) % 1000;
-  return num.toString().padStart(3, "0");
-}
-
 const PREVIEW_MAX = 110;
 const PREVIEW_LOOKAHEAD = 140;
 const PREVIEW_MIN_SENTENCE = 30;

@@ -76,6 +76,10 @@ body::before {
   color: #c47a3a !important;
 }
 
+.share-btn:not(:disabled):hover {
+  color: #c47a3a !important;
+}
+
 .filter-search::placeholder {
   color: #2a2a2a;
 }

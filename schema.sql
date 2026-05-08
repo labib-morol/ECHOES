@@ -7,7 +7,7 @@
 -- ============================================
 CREATE TABLE IF NOT EXISTS thoughts (
   id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  content         TEXT NOT NULL CHECK (char_length(content) >= 3 AND char_length(content) <= 280),
+  content         TEXT NOT NULL CHECK (char_length(content) >= 3 AND char_length(content) <= 2000),
   mood            TEXT NOT NULL DEFAULT 'untagged',
   mood_color      TEXT NOT NULL DEFAULT '#888888',
   key_hash        TEXT NOT NULL,

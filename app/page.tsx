@@ -219,11 +219,7 @@ export default function Home() {
 
   const isUnlocked = ownThoughtIds.length > 0;
 
-  const visibleThoughts = useMemo(() => {
-    if (!isUnlocked) return thoughts;
-    const own = new Set(ownThoughtIds);
-    return thoughts.filter((t) => own.has(t.id));
-  }, [thoughts, ownThoughtIds, isUnlocked]);
+  const visibleThoughts = thoughts;
 
   const moods = useMemo(() => visibleThoughts.map((t) => t.mood), [visibleThoughts]);
 
@@ -651,7 +647,7 @@ export default function Home() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: isUnlocked ? 0.2 : 1.5, duration: 1.0, ease: "easeOut" }}
+              transition={{ delay: 1.5, duration: 1.0, ease: "easeOut" }}
               style={{
                 minHeight: "50vh",
                 display: "flex",
@@ -668,24 +664,22 @@ export default function Home() {
                   fontFamily: "var(--font-playfair), serif",
                   fontStyle: "italic",
                   fontSize: 16,
-                  color: isUnlocked ? "#3a3a36" : "#1e1e1c",
+                  color: "#1e1e1c",
                   letterSpacing: "-0.005em",
                 }}
               >
-                {isUnlocked ? "your thoughts have already faded." : "the wall is quiet."}
+                the wall is quiet.
               </div>
               <div
                 style={{
                   fontFamily: "var(--font-syne), sans-serif",
                   fontWeight: 300,
                   fontSize: 10,
-                  color: isUnlocked ? "#2a2a28" : "#161614",
+                  color: "#161614",
                   letterSpacing: "0.08em",
                 }}
               >
-                {isUnlocked
-                  ? "release a new one to see it here."
-                  : "be the first to break the silence."}
+                be the first to break the silence.
               </div>
             </motion.div>
           ) : (

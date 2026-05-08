@@ -15,6 +15,7 @@ import {
   getThoughtTypography,
   hexToRgba,
 } from "@/lib/utils";
+import { renderThoughtImage, shareOrDownload } from "@/lib/share";
 
 const MONO_STACK =
   'ui-monospace, "SF Mono", "JetBrains Mono", "Courier New", monospace';
@@ -58,6 +59,8 @@ function ThoughtCardComponent({ thought, isOwn, isNew, isMatched, onFelt }: Thou
   const [emberPulsing, setEmberPulsing] = useState(false);
   const [rippleKey, setRippleKey] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareLabel, setShareLabel] = useState<string | null>(null);
 
   const moodColor = thought.mood_color || "#888888";
   const restingBorder = useMemo(
@@ -105,6 +108,36 @@ function ThoughtCardComponent({ thought, isOwn, isNew, isMatched, onFelt }: Thou
   useEffect(() => {
     startResting();
   }, [isOwn, moodColor, startResting]);
+
+  const handleShare = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (sharing) return;
+    setSharing(true);
+    setShareLabel(null);
+    try {
+      const blob = await renderThoughtImage({
+        id: thought.id,
+        content: thought.content,
+        mood: thought.mood,
+        mood_color: moodColor,
+      });
+      if (!blob) {
+        setShareLabel("couldn't render");
+        return;
+      }
+      const result = await shareOrDownload(blob, `echo-${thought.id.slice(0, 8)}.png`);
+      if (result === "shared") setShareLabel("shared ✦");
+      else if (result === "downloaded") setShareLabel("saved");
+      else if (result === "cancelled") setShareLabel(null);
+      else setShareLabel("couldn't share");
+    } catch (err) {
+      console.error("[echoes:share] failed:", err);
+      setShareLabel("couldn't share");
+    } finally {
+      setSharing(false);
+      window.setTimeout(() => setShareLabel(null), 2400);
+    }
+  };
 
   const handleFelt = async (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -478,6 +511,43 @@ function ThoughtCardComponent({ thought, isOwn, isNew, isMatched, onFelt }: Thou
                   if you&apos;re struggling, you&apos;re not alone — Kaan Pete Roi: 01779-554391
                 </div>
               )}
+
+              <div
+                style={{
+                  marginTop: 22,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  disabled={sharing}
+                  aria-label="share as image"
+                  className="share-btn"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    padding: "4px 6px",
+                    fontFamily: "var(--font-syne), sans-serif",
+                    fontWeight: 300,
+                    fontSize: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.18em",
+                    color: sharing ? "#3a3a36" : "#555",
+                    cursor: sharing ? "default" : "pointer",
+                    transition: "color 200ms ease",
+                  }}
+                >
+                  {sharing
+                    ? "rendering…"
+                    : shareLabel
+                    ? shareLabel
+                    : "share ↗"}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
