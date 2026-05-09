@@ -316,6 +316,7 @@ function ThoughtCardComponent({
           <motion.div
             layoutId={isMobile ? undefined : cardId}
             className="thought-card-inner"
+            data-short={typography.centerVertically ? "true" : undefined}
             onClick={openExpand}
             style={{
               position: "relative",
@@ -389,6 +390,7 @@ function ThoughtCardComponent({
             </p>
 
             <div
+              className="meta-row-mobile"
               style={{
                 marginTop: 14,
                 display: "flex",
@@ -680,7 +682,7 @@ function ThoughtCardComponent({
                 background: "#141210",
                 borderTopLeftRadius: 20,
                 borderTopRightRadius: 20,
-                padding: "10px 20px 24px",
+                padding: "8px 20px calc(20px + env(safe-area-inset-bottom, 0px))",
                 display: "flex",
                 flexDirection: "column",
                 borderTop: `0.5px solid rgba(255,255,255,0.08)`,
@@ -688,26 +690,37 @@ function ThoughtCardComponent({
                   moodColor,
                   0.55
                 )}`,
-                touchAction: "none",
               }}
             >
               <div
-                aria-hidden="true"
+                role="button"
+                aria-label="drag to dismiss"
+                tabIndex={-1}
                 style={{
-                  width: 32,
-                  height: 4,
-                  background: "rgba(255,255,255,0.15)",
-                  borderRadius: 2,
                   alignSelf: "center",
-                  margin: "4px 0 18px",
+                  padding: "10px 24px 12px",
+                  cursor: "grab",
+                  touchAction: "none",
                 }}
-              />
+              >
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: 36,
+                    height: 4,
+                    background: "rgba(255,255,255,0.18)",
+                    borderRadius: 2,
+                  }}
+                />
+              </div>
 
               <div
+                className="bottom-sheet-body"
                 style={{
                   flex: 1,
                   overflowY: "auto",
                   paddingBottom: 14,
+                  paddingTop: 6,
                 }}
               >
                 <p

@@ -444,6 +444,7 @@ export default function Home() {
             }}
           >
             <motion.p
+              className="onboarding-line"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
@@ -476,7 +477,9 @@ export default function Home() {
             transition={{ duration: 0.3, ease: "easeOut" }}
             style={{
               position: "fixed",
-              ...(isMobile ? { top: 84 } : { bottom: 96 }),
+              ...(isMobile
+                ? { top: "calc(84px + env(safe-area-inset-top, 0px))" }
+                : { bottom: 96 }),
               left: "50%",
               transform: "translateX(-50%)",
               zIndex: 50,
@@ -505,10 +508,13 @@ export default function Home() {
         className="sticky-bar"
         style={{
           padding: "12px 40px 8px",
-          background: isScrolled ? "rgba(13,11,9,0.85)" : "transparent",
-          backdropFilter: isScrolled ? "blur(12px)" : "none",
-          WebkitBackdropFilter: isScrolled ? "blur(12px)" : "none",
-          borderBottom: isScrolled ? "0.5px solid rgba(255,255,255,0.04)" : "0.5px solid transparent",
+          background: isMobile || isScrolled ? "rgba(13,11,9,0.88)" : "transparent",
+          backdropFilter: isMobile || isScrolled ? "blur(12px)" : "none",
+          WebkitBackdropFilter: isMobile || isScrolled ? "blur(12px)" : "none",
+          borderBottom:
+            isScrolled || isMobile
+              ? "0.5px solid rgba(255,255,255,0.04)"
+              : "0.5px solid transparent",
           transition:
             "background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease",
         }}
@@ -520,9 +526,9 @@ export default function Home() {
             flexWrap: "wrap",
             justifyContent: "space-between",
             alignItems: "center",
-            gap: 16,
-            marginBottom: 10,
-            maxHeight: 60,
+            gap: isMobile ? 8 : 16,
+            marginBottom: isMobile ? 6 : 10,
+            maxHeight: isMobile ? "none" : 60,
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -530,7 +536,7 @@ export default function Home() {
               style={{
                 fontFamily: "var(--font-playfair), serif",
                 fontStyle: "italic",
-                fontSize: 24,
+                fontSize: isMobile ? 22 : 24,
                 color: "#e6dfd2",
                 lineHeight: 1,
                 margin: 0,
@@ -564,7 +570,7 @@ export default function Home() {
               style={{
                 fontFamily: "var(--font-playfair), serif",
                 fontStyle: "italic",
-                fontSize: 11,
+                fontSize: isMobile ? 10 : 11,
                 color: "#5a544a",
                 letterSpacing: "0.01em",
                 lineHeight: 1.2,
@@ -781,7 +787,7 @@ export default function Home() {
       <main
         style={{
           minHeight: "100vh",
-          padding: "40px 40px 80px",
+          padding: isMobile ? "20px 14px 56px" : "40px 40px 80px",
           position: "relative",
           zIndex: 1,
         }}
@@ -940,6 +946,7 @@ export default function Home() {
         {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
 
         <footer
+          className="echoes-footer"
           style={{
             marginTop: 80,
             textAlign: "center",
@@ -973,7 +980,9 @@ export default function Home() {
             style={{
               position: "fixed",
               right: isMobile ? 20 : 24,
-              bottom: isMobile ? 28 : 24,
+              bottom: isMobile
+                ? "calc(28px + env(safe-area-inset-bottom, 0px))"
+                : 24,
               zIndex: 35,
               display: "flex",
               alignItems: "center",

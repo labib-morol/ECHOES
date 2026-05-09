@@ -45,6 +45,7 @@ export default function AboutModal({ onClose }: AboutModalProps) {
           exit={{ opacity: 0, y: 16 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
           onClick={(e) => e.stopPropagation()}
+          className="about-box"
           style={{
             position: "relative",
             width: "100%",

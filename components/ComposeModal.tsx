@@ -117,6 +117,7 @@ export default function ComposeModal({ onClose, onPosted, onRateLimited }: Compo
             background: { duration: 0.6, ease: "easeOut" },
           }}
           onClick={(e) => e.stopPropagation()}
+          className="compose-box"
           style={{
             width: "100%",
             maxWidth: 420,

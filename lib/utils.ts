@@ -127,7 +127,7 @@ export function getThoughtTypography(content: string): ThoughtTypography {
     };
   }
   return {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 400,
     padding: "20px 18px 16px 18px",
     centerVertically: false,

@@ -176,9 +176,10 @@ body::before {
 
 @media (max-width: 767px) {
   .sticky-bar {
-    position: relative;
-    top: auto;
-    z-index: auto;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: 10px 16px 6px !important;
   }
 
   .wall {
@@ -186,7 +187,7 @@ body::before {
     flex-direction: column;
     gap: 12px;
     min-height: 60vh;
-    padding: 8px 4px;
+    padding: 4px 4px 24px;
     column-count: unset;
     column-gap: unset;
   }
@@ -211,16 +212,28 @@ body::before {
 
   .thought-card-inner p {
     text-align: left !important;
+    font-size: 15px !important;
+    line-height: 1.7 !important;
+    -webkit-line-clamp: 6 !important;
+  }
+
+  .thought-card-inner[data-short="true"] p {
+    font-size: 18px !important;
+    text-align: center !important;
   }
 
   .felt-btn {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    width: 44px !important;
-    height: 44px !important;
-    right: 6px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    right: 4px !important;
     bottom: 4px !important;
-    font-size: 16px !important;
+    font-size: 17px !important;
+  }
+
+  .meta-row-mobile {
+    padding-right: 48px !important;
   }
 
   .fracture-lines {
@@ -228,15 +241,33 @@ body::before {
   }
 
   .filter-pill {
-    padding: 10px 16px !important;
+    padding: 9px 16px !important;
     font-size: 11px !important;
-    height: 34px;
+    min-height: 34px;
     display: inline-flex;
     align-items: center;
   }
 
-  .sticky-bar {
-    padding: 16px 16px 10px !important;
+  .echoes-footer {
+    font-size: 10px !important;
+    margin-top: 56px !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+
+  /* Allow vertical scroll inside bottom sheet body */
+  .bottom-sheet-body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .compose-box,
+  .about-box {
+    padding: 24px 22px 22px !important;
+  }
+
+  .onboarding-line {
+    font-size: 16px !important;
   }
 }
 
